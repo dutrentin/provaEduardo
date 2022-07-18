@@ -28,3 +28,5 @@ http://localhost:8080/provaEduardo-api/movies/winner
 OBSERVAÇÕES:
 - Implementei nos services mas não disponibilizei os métodos de update e remove por questão de tempo de entrega.
 - O retorno dos vencedores não está retornando uma lista de mínimo e máximo, apenas 1 produtor MIN e 1 produtor MAX com os devidos anos.
+- Não criados testes unitários. 
+
