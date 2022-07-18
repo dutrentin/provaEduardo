@@ -1,0 +1,90 @@
+options:
+  max-time: 20
+definitions:
+  steps:
+    - step: &build
+        name: Build
+        image:
+          name: docker.qualirede.com.br/quali-maven:3.6.2-jdk-8
+          username: $NEXUS_USERNAME
+          password: $NEXUS_PASSWORD
+        caches:
+          - maven
+        script:
+          - mvn package -P producao
+        artifacts:
+          - target/**
+          - src/**
+
+    - step: &docker-build
+        name: Docker build
+        script:
+          - source build/scripts.sh && docker_build ${BITBUCKET_BRANCH}.${BITBUCKET_BUILD_NUMBER}
+        services:
+          - docker
+
+    - step: &deploy
+        name: Deploy in test
+        deployment: test
+        trigger: manual
+        script:
+          - sh build/scripts.sh deploy
+          - pipe: atlassian/ssh-run:0.2.2
+            variables:
+              SSH_USER: ${USER}
+              SERVER: ${SERVER_ADDRESS}
+              MODE: 'script'
+              COMMAND: './deploy.sh'
+
+    - step: &merge-test
+        name: Merge to test branch
+        script:
+          - bash build/scripts.sh git_merge
+
+    - step: &create-tag
+        name: Create tag
+        description: Automatically generate tag
+        script:
+          # fetch release version
+          - source build/scripts.sh && get_version
+          # docker login
+          - source build/scripts.sh && docker_build ${VERSION}
+          # generate tag at next deployments
+          - sh build/scripts.sh git_tag
+        services:
+          - docker
+
+    - step: &liquibase-commit
+        name: Commits the SQL file generated on Maven package phase.
+        script:
+          - source build/scripts.sh && liquibase_create_tag
+
+    - step: &sonar
+        name: Run Sonar verification against SonarQube.
+        image:
+          name: docker.qualirede.com.br/quali-maven:3.6.2-jdk-8
+          username: $NEXUS_USERNAME
+          password: $NEXUS_PASSWORD
+          caches:
+            - maven
+        script:
+          - mvn package sonar:sonar -Dsonar.projectName=${APPLICATION}-${BITBUCKET_BRANCH} -Dsonar.projectKey=${APPLICATION}-${BITBUCKET_BRANCH} -Dsonar.host.url=${SONAR_HOST} -Dsonar.login=${SONAR_LOGIN_KEY}
+
+pipelines:
+  branches:
+    'dev':
+      - step: *sonar
+      - step: *build
+
+
+    'ANB*':
+      - step: *build
+      - step: *merge-test
+
+          
+    'master':
+      - step: *build
+      - step: *create-tag
+
+    'hotfix-*':
+      - step: *build

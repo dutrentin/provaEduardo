@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+
+
+    <changeSet id="1.0.0" author="Eduardo Trentin">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="TESTE"/>
+            </not>
+        </preConditions>
+        <comment>Padrão para arquitetura de API</comment>
+        <sql>
+            CREATE TABLE TESTE (
+            CD_TESTE INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
+            NM_TESTE VARCHAR(100),
+            PRIMARY KEY (CD_TESTE)
+            );
+        </sql>
+        <rollback>
+            <sql>
+                DROP TABLE TESTE;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
